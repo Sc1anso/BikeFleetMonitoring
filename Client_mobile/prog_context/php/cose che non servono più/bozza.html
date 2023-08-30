@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- datetimepicker CSS -->
+    <link href="bootstrap-datetimepicker-master\css\bootstrap-datetimepicker.min.css" rel="stylesheet">
+    <!-- OpenLayers CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.6.1/css/ol.css" type="text/css">
+    <!-- CSS -->
+    <link href="frontend.css" rel="stylesheet">
+
+    <title>Front-End</title>
+  </head>
+  <body>
+
+    <div id="topbar">
+      <h1 class="text-center">Front-End</h1>
+    </div>
+
+    <div class="row container-fluid">
+      <div class="col-2 layers">
+        <h3 class="text-center">Layers</h3>
+        <div class="controls">
+          <input type="checkbox" name="bike" onClick="setBikeData()"> Bike Rental Points<br>
+          <input type="checkbox" name="poi" onClick="setPOI()"> POI<br>
+          <input type="checkbox" name="forbidden" onClick="setForbidden()"> Forbidden<br>
+          <input type="button" name="racks" onClick="get_rack()" value="Get Racks"><br>
+        </div>
+      </div>
+      <div id="map-ctnr" class="col-8">
+        <div id="map" class="">
+          <div id="popup"></div>
+        </div>
+      </div>
+      <div class="col-2 bikeControl">
+        <h3 class="text-center">Controllo bici</h3>
+        <div class="bikeUI">
+          <ul class="list-group-flush" id="rack_info">
+            <li class="list-group-item"><b>ID:</b><p id="bikeID" class="d-inline"></p></li>
+            <li class="list-group-item"><b>Storico:</b><input id="storico" type="number" value="0" min="0" max="1" class="collapse ms-1">
+              <input id="btn_storico" type="submit">
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- IMPORT JQUERY-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- OpenLayers JS -->
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.6.1/build/ol.js"></script>
+    <!-- datetimepicker JS -->
+    <script type="text/javascript" src="bootstrap-datetimepicker-master\js\bootstrap-datetimepicker.min.js" charset="UTF-8"></script>
+
+    <script type="text/javascript">
+
+      //Test Code for bikes
+      var bk_selected = "";
+      var selected_bike = "";
+      var rack_id = "";
+      var act_date = "";
+
+      var bike1 = {
+        "id": 1,
+        "rent_park": 0,
+        "onService": false,
+        "location": [11.340579,44.502138],
+        "history": [
+          [[11.331042537847045, 44.49788585781431], [11.331289261446026, 44.4981001522177], [11.33192226271534, 44.498406255267696], [11.332383602623484, 44.49864348402613], [11.332726925345822, 44.49880418683021], [11.332769840686117, 44.49928629258503], [11.3328556713667, 44.500036226946975], [11.332995146222652, 44.500571888442735], [11.333793135508323, 44.50032315871773], [11.335024333247677, 44.500417860826204], [11.335808920042362, 44.50120129964163], [11.336834918158488, 44.5010807712783], [11.337462587594237, 44.50213969051976], [11.338102327596056, 44.502535704156436], [11.339080043447897, 44.50232908868163], [11.340579,44.502138]
+          ]
+        ]
+      }
+
+      var bike2 = {
+        "id": 2,
+        "rent_park": 0,
+        "onService": false,
+        "location": [11.352455,44.491949],
+        "history": []
+      }
+
+      var bike3 = {
+        "id": 3,
+        "rent_park": 0,
+        "onService": false,
+        "location": [11.338967,44.491657],
+        "history": []
+      }
+
+      var bikesTEST = [bike1, bike2, bike3];
+
+      var bikes = [];
+
+      const geoMarkers_Bikes = {
+        "type": "FeatureCollection",
+        "features": [
+          // {
+          //   "type": "Feature",
+          //   "geometry": {
+          //     "type": "Point",
+          //     "coordinates": bike1["location"]
+          //   }
+          // },
+          // {
+          //   "type": "Feature",
+          //   "geometry": {
+          //     "type": "Point",
+          //     "coordinates": bike2["location"]
+          //   }
+          // }
+        ]
+      }
+
+      function initBikes(){
+        // GET request to Server: receive an array of bikes Objects (Use try...catch)
+        bikes = [...bikesTEST];
+        //console.log(bikes);
+        bikes.forEach(el => {
+          console.log(el["location"]);
+          let newFeature = {
+            "type": "Feature",
+            "geometry": {
+              "coordinates": el["location"],
+              "type": "Point"
+            },
+            "id": el["id"]
+          }
+          geoMarkers_Bikes["features"].push(newFeature);
+        });
+      }
+
+      initBikes();
+
+      // TEST MOVING MARKER
+
+      function getPointFromLongLat(loc){
+        return ol.proj.transform(loc, 'EPSG:4326', 'EPSG:3857')
+      }
+
+      function getLongLatFromPoint(loc){
+        return ol.proj.transform(loc, 'EPSG:3857', "EPSG:4326");
+      }
+
+      function updateBikesLocations(){
+        // GET request to Server: receive an array of Objects of bikes that changed location (Use try...catch)
+        // like {"id_bike": 4, "coordinates": [xx.xxxx,yy.yyyyyy]}
+        // OR
+        // receive an array of bikes Objects, all of them
+
+        var oldCoordinates = [];
+        bikes.forEach(el => {
+          oldCoordinates.push(el["location"]);
+        });
+
+        var newBikes = [
+          {
+            "id": 1,
+            "rent_park": 0,
+            "onService": false,
+            "location": [11.340579,44.502138],
+            "history": [
+              [[11.331042537847045, 44.49788585781431], [11.331289261446026, 44.4981001522177], [11.33192226271534, 44.498406255267696], [11.332383602623484, 44.49864348402613], [11.332726925345822, 44.49880418683021], [11.332769840686117, 44.49928629258503], [11.3328556713667, 44.500036226946975], [11.332995146222652, 44.500571888442735], [11.333793135508323, 44.50032315871773], [11.335024333247677, 44.500417860826204], [11.335808920042362, 44.50120129964163], [11.336834918158488, 44.5010807712783], [11.337462587594237, 44.50213969051976], [11.338102327596056, 44.502535704156436], [11.339080043447897, 44.50232908868163], [11.340579,44.502138]
+              ]
+            ]
+          },
+          {
+            "id": 2,
+            "rent_park": 0,
+            "onService": true,
+            "location": [11.352999,44.491949],
+            "history": []
+          },
+          {
+            "id": 3,
+            "rent_park": 0,
+            "onService": false,
+            "location": [11.338967,44.491921],
+            "history": []
+          }
+        ];
+
+        bikes = [...newBikes];
+
+        // geoMarkers_Bikes["features"].forEach((el, idx) => {
+        //   el["geometry"]["coordinates"] = bikes[idx]["location"];
+        // });
+        //console.log(vectorSource.getFeatures());
+        var x = vectorSource.getFeatures();
+        x.forEach((el, idx) => {
+          // el.setGeometry(new ol.geom.Point(getPointFromLongLat(bikes[idx]["location"])));
+
+          //skip bike if it didn't change location
+          if(JSON.stringify(oldCoordinates[idx]) == JSON.stringify(bikes[idx]["location"])){
+            return;
+          }
+
+          var line = new ol.geom.LineString([oldCoordinates[idx], bikes[idx]["location"]]);
+          var step = 0;
+          var key = setInterval( function() {
+            if (step < 100) {
+              step++;
+              el.setGeometry(new ol.geom.Point(getPointFromLongLat(line.getCoordinateAt(step/100))));
+            } else {
+              clearInterval(key);
+            }
+          }, 10);
+        });
+      }
+
+      //const interval = setInterval(updateBikesLocations(), 3000);
+
+      // END MOVING MARKERS
+
+      // Rent Style
+      var bikeStyle = new ol.style.Style({
+        image: new ol.style.Icon({
+          scale: 0.15,
+          src: "media/bike.jpeg"
+        })
+      });
+
+      // POI Style
+      var POIStroke = new ol.style.Stroke({
+        color : 'rgba(255,0,0,1)',
+        width : 1
+      });
+
+      var POIFill = new ol.style.Fill({
+        color: 'rgba(255,0,0,0.4)'
+      });
+
+      var POIStyle = new ol.style.Style({
+        stroke : POIStroke,
+        fill : POIFill
+      })
+
+      // Forbidden Area Style
+      var forbiddenStroke = new ol.style.Stroke({
+        color : 'rgba(34, 167, 240, 1)',
+        width : 1
+      });
+
+      var forbiddenFill = new ol.style.Fill({
+        color: 'rgba(34, 167, 240, 0.4)'
+      });
+
+      var forbiddenStyle = new ol.style.Style({
+        stroke : forbiddenStroke,
+        fill : forbiddenFill
+      })
+
+      // Bikes Style
+      const image = new ol.style.Circle({
+        radius: 4,
+        fill: new ol.style.Fill({color: 'blue'}),
+        stroke: new ol.style.Stroke({color: 'black', width: 1}),
+      });
+
+      const imageOnMove = new ol.style.Circle({
+        radius: 6,
+        fill: new ol.style.Fill({color: 'red'}),
+        stroke: new ol.style.Stroke({color: 'white', width: 2}),
+      });
+
+      const bikeOnMoveStyle = new ol.style.Style({
+        image: imageOnMove
+      });
+
+      const bikeNotselected = new ol.style.Style({
+        image: image
+      });
+
+      const bikesStyle = {
+        "Point": new ol.style.Style({
+          image: image,
+        })
+      };
+
+      const styleFunction = function(feature){
+        return bikesStyle[feature.getGeometry().getType()];
+      };
+
+      // OpenStreetMap
+      var osmLayer = new ol.layer.Tile({
+        source: new ol.source.OSM(),
+        visible: true
+      });
+
+      // Vectors
+      var bikeData = new ol.layer.Vector({
+        title: "Bikes Rent",
+        source: new ol.source.Vector({
+          url: "assets/rastrelliere.json",
+          format: new ol.format.GeoJSON()
+        }),
+        visible: false,
+        style: bikeStyle
+      });
+
+      var POIData = new ol.layer.Vector({
+        title: 'POI',
+        source: new ol.source.Vector({
+          url: "assets/POI.json",
+          format: new ol.format.GeoJSON()
+        }),
+        visible: false,
+        style: POIStyle
+      });
+
+      var forbiddenData = new ol.layer.Vector({
+        title: 'forbidden',
+        source: new ol.source.Vector({
+          url: "assets/forbidden.json",
+          format: new ol.format.GeoJSON()
+        }),
+        visible: false,
+        style: forbiddenStyle
+      });
+
+      console.log(new ol.format.GeoJSON({featureProjection:"EPSG:3857"}).readFeatures(geoMarkers_Bikes));
+      const vectorSource = new ol.source.Vector({
+        features: new ol.format.GeoJSON({featureProjection:"EPSG:3857"}).readFeatures(geoMarkers_Bikes),
+        format: new ol.format.GeoJSON()
+      });
+
+      var geoLayer = new ol.layer.Vector({
+        title: 'GeoJSON Layer',
+        source: vectorSource,
+        style: styleFunction
+      });
+
+      // Map
+      // function initLayers(){
+      //   all_layers = [];
+      //   all_layers.push(osmLayer);
+      //   all_layers.push(bikeData);
+      //   all_layers.push(POIData);
+      //   all_layers.push(forbiddenData);
+      //   all_layers.push(geoLayer);
+      //   return all_layers;
+      // }
+
+      var map = new ol.Map({
+        target: "map",
+        layers: [osmLayer, bikeData, POIData, forbiddenData, geoLayer],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([11.34369993944896, 44.494199018227775]),
+          zoom: 15
+        })
+      });
+
+      //Commands
+      function setBikeData() {
+        if(bikeData.getVisible() == false){
+          bikeData.setVisible(true);
+        }
+        else{
+          bikeData.setVisible(false);
+        }
+      }
+
+      function setPOI() {
+        if(POIData.getVisible() == false){
+          POIData.setVisible(true);
+        }
+        else{
+          POIData.setVisible(false);
+        }
+      }
+
+      function setForbidden() {
+        if(forbiddenData.getVisible() == false){
+          forbiddenData.setVisible(true);
+        }
+        else{
+          forbiddenData.setVisible(false);
+        }
+      }
+
+      setTimeout(updateBikesLocations, 2000);
+
+      var selectedBike = -1;
+      //var selectedBikeF;
+
+      function updateBikeUI(){
+        const bikeID = document.getElementById("bikeID");
+        const storico = document.getElementById("storico");
+        if(selectedBike > 0){
+          bikeID.innerHTML = " " + selectedBike;
+          var inputTag = document.getElementById("storico");
+          inputTag.setAttribute("type", "number");
+          var numbRents = bikes[selectedBike-1]["history"].length;
+          if(numbRents > 0){
+            inputTag.setAttribute("min", 1);
+            inputTag.setAttribute("max", numbRents);
+            inputTag.setAttribute("value", numbRents);
+          }
+          else{
+            inputTag.setAttribute("min", 0);
+            inputTag.setAttribute("max", 0);
+            inputTag.setAttribute("value", 0);
+          }
+          inputTag.classList.add("show");
+        }
+        else {
+          bikeID.innerHTML = "";
+          storico.classList.remove("show");
+        }
+      }
+
+      var btn_storico = document.getElementById("btn_storico");
+      btn_storico.addEventListener("click", (e) => {
+        //check if ready
+        var nrent = document.getElementById("storico").value;
+        if(!(nrent > 0)){
+          //do nothing
+          return;
+        }
+        //call drawRoute
+        var line = bikes[selectedBike-1]["history"][nrent-1];
+        drawRoute(line)
+
+      });
+
+      function get_rack(){
+        const xhttp = new XMLHttpRequest();
+        xhttp.onload = function() {
+          console.dir(this.response);
+        }
+        xhttp.open("GET", "http://127.0.0.1:5000/get_rack");
+        xhttp.send();
+      }
+
+      map.on('click', function (event) {
+        var res;
+        const feature = map.getFeaturesAtPixel(event.pixel)[0];
+        const d = new Date();
+        var year = d.getFullYear();
+        var month = d.getMonth() + 1;
+        var day = d.getDate();
+        act_date = day + "-" + month + "-" + year;
+        //console.log("data: " + day + "-" + month + "-" + year);
+        if(feature){
+          //console.log(feature.getProperties()["Nome"]);
+          //PHP REQUEST
+          $.get( "rack_query.php", { name: feature.getProperties()["Nome"]} )
+            .done(function( data ) {
+              //console.log( "Data Loaded: " + data );
+              res = JSON.parse(data);
+              var id = res[0]["id"];
+              rack_id = id;
+              var name = res[0]["name"]
+              var bike_lst = res[0]["bike_lst"].split(", ");
+              //console.log(id);
+              //console.log(name);
+              //console.log(bike_lst[0]);
+              var rk_info = document.getElementById('rack_info');
+              rk_info.innerHTML = "";
+              rk_info.innerHTML = "<p>Id: " + id + " - Name: '" + name + "'</p>"
+              bike_lst.forEach(bike => {
+                bk = bike.replace('[', '').replace(']', '').replace("res", "");
+                if (bike.includes("res")) {
+                  rk_info.insertAdjacentHTML("beforeend", "<input type='checkbox' id=" + bike.replace('[', '').replace(']', '').replace("res", " Reserved") + " class='bike_sel' name=" + bike.replace('[', '').replace(']', '').replace("res", "") + " onClick='enableUnlock(this.name)'> Bike number: " + bike.replace('[', '').replace(']', '') + "<br>");
+                } else {
+                  rk_info.insertAdjacentHTML("beforeend", "<input type='checkbox' id=" + bike.replace('[', '').replace(']', '') + " class='bike_sel' name=" + bike.replace('[', '').replace(']', '') + " onClick='pickDate(this.name)'> Bike number: " + bike.replace('[', '').replace(']', '') + "<br>");
+                }
+              });
+            });
+          //FLASK REQUEST
+          /*const xhttp = new XMLHttpRequest();
+          xhttp.onload = function() {
+            res = this.response.split('", "');
+            console.log(res[3]);
+            res.forEach(el =>{
+              el = el.replace('[["', '').replace('"]]', '')
+              //console.log(el);
+            });
+            var rk_info = document.getElementById('rack_info');
+            rk_info.innerHTML = "";
+            rk_info.innerHTML = "<p>Id: " + res[0].replace('[["', '') + " - Name: '" + res[1] + "'</p>"
+            bike_lst = res[3].split(", ")
+            console.log(bike_lst);
+            bike_lst.forEach(bike => {
+              rk_info.insertAdjacentHTML("beforeend", "<input type='checkbox' name=" + bike.replace('[', '').replace(']', '') + " onClick=''> Bike number: " + bike.replace('[', '').replace(']', '') + "<br>");
+            });
+
+          }
+          xhttp.open("GET", "http://127.0.0.1:5000/get_rack/" + feature.getProperties()["Nome"]);
+          xhttp.send();*/
+
+          //OLD FUNCTION@@@@@@@@@@@@@@
+
+          //if(feature.getId() == selectedBike){
+            //selectedBike = -1;
+            //feature.setStyle(bikeNotselected);
+          //}
+          //else {
+            //var oldBike = selectedBike;
+            //selectedBike = feature.getId();
+            //feature.setStyle(bikeOnMoveStyle);
+            //if(oldBike > 0){
+              //vectorSource.getFeatureById(oldBike).setStyle(bikeNotselected);
+            //}
+          //}
+          //updateBikeUI();
+        }
+      });
+
+      /*$("input .bike_sel").click(function(){
+        console.log(this.name);
+      });*/
+      function pickDate(bk){
+        //selected_bike = $("input.bike_sel:checked").attr("name");
+        //console.log($("input.bike_sel:checked").attr("name"));
+        var check_list = document.getElementsByClassName('bike_sel');
+        var rk_info = document.getElementById('rack_info');
+        var old_btn_res = document.getElementById('reserve');
+        var old_btn_unl = document.getElementById('unlock');
+        var old_cod_txt = document.getElementById('unlock_code_in');
+        //console.log(old_btn_res);
+        //console.log(old_btn_unl);
+        console.log("bk: " + bk);
+        for (var i = 0; i < check_list.length; i++) {
+          if (check_list[i].name != bk) {
+            check_list[i].checked = false;
+          }
+        }
+        if (old_btn_res) {
+          old_btn_res.remove();
+        }
+        if (old_btn_unl) {
+          old_btn_unl.remove();
+        }
+        if (old_cod_txt) {
+          old_cod_txt.remove();
+        }
+        bk_selected = bk;
+        //rk_info.insertAdjacentHTML("beforeend", "<p>Select date for rent bike number: " + selected_bike + "</p>");
+        //rk_info.insertAdjacentHTML("beforeend", "<input type='text' id='datetimepicker'>");
+        //$('#datetimepicker').datetimepicker({
+        //  format: 'yyyy-mm-dd'
+        //});
+        rk_info.insertAdjacentHTML("beforeend", "<input type='button' id='reserve' onClick='reserve_bike(bk_selected)' value='Reserve'>");
+      }
+
+      function enableUnlock(bk){
+        //selected_bike = $("input.bike_sel:checked").attr("name");
+        //console.log($("input.bike_sel:checked").attr("name"));
+        var check_list = document.getElementsByClassName('bike_sel');
+        var rk_info = document.getElementById('rack_info');
+        var old_btn_res = document.getElementById('reserve');
+        var old_btn_unl = document.getElementById('unlock');
+        var old_cod_txt = document.getElementById('unlock_code_in');
+        //console.log(old_btn_res);
+        //console.log(old_btn_unl);
+        console.log("unl bk: " + bk);
+        for (var i = 0; i < check_list.length; i++) {
+          if (check_list[i].name != bk) {
+            check_list[i].checked = false;
+          }
+        }
+        if (old_btn_res) {
+          old_btn_res.remove();
+        }
+        if (old_btn_unl) {
+          old_btn_unl.remove();
+        }
+        if (old_cod_txt) {
+          old_cod_txt.remove();
+        }
+        //rk_info.insertAdjacentHTML("beforeend", "<p>Select date for rent bike number: " + selected_bike + "</p>");
+        //rk_info.insertAdjacentHTML("beforeend", "<input type='text' id='datetimepicker'>");
+        //$('#datetimepicker').datetimepicker({
+        //  format: 'yyyy-mm-dd'
+        //});
+        rk_info.insertAdjacentHTML("beforeend", "<input type='text' id='unlock_code_in' placeholder='Insert unlock code here'>");
+        rk_info.insertAdjacentHTML("beforeend", "<input type='button' id='unlock' onClick='startRent(bk)' value='Start Rent'>");
+        rk_info.insertAdjacentHTML("beforeend", "<input type='button' id='stop' onClick='stopRent()' value='Stop Rent'>");
+      }
+
+      function reserve_bike(sel_bike){
+        //var date_picker = document.getElementById('datetimepicker');
+        //reserv_delete();
+        //console.log(date_picker.value);
+        console.log("SEL BIKE: " + sel_bike);
+        $.get( "reserve_bike.php", { name: sel_bike, rack: rack_id, date: act_date} )
+          .done(function(data) {
+            console.log(data);
+            selected_bike = sel_bike;
+            Android.sendNotification(data, selected_bike);
+            //window.setTimeout(reserv_delete, 900000);
+            //window.setTimeout(reserv_delete, 60000);
+            //var res = JSON.parse(data);
+            //console.log(data);
+        });
+
+      }
+
+      function reserv_delete(){
+        //var date_picker = document.getElementById('datetimepicker');
+        $.get( "reservation_delete.php", { name: selected_bike, rack: rack_id, date: act_date} )
+          .done(function(data) {
+            console.log(data);
+            //Android.sendNotification(data, selected_bike);
+            //window.setTimeout();
+            //var res = JSON.parse(data);
+            //console.log(data);
+        });
+      }
+
+      function startRent(bk_to_r) {
+        var code = document.getElementById('unlock_code_in').value;
+        $.get("get_code_from_db.php", {name: bk_to_r, user_code: code}).done(function(db_token){
+          console.log("DB TOKEN: " + db_token);
+          Android.getPosition(String(bk_to_r), String(rack_id));
+        });
+      }
+
+      function checkForEndRent(point, bike, start_rack){
+        $.get("check_endrack.php", {point: point}).done(function(res){
+          console.log(res);
+        });
+      }
+
+      function stopRent(){
+        Android.stopRent();
+      }
+      var maxDist = 500; //meters
+
+      function alertDistance(){
+
+      }
+
+      function checkDistance(loc){
+
+        var dist; // return distance from POSTGIS query
+        if(dist >= maxDist){
+          alertDistance();
+        }
+
+      }
+
+      function drawRoute(locs){
+        console.log(locs);
+        //var locs = [ [11.352455,44.491949], [11.340579,44.502138], [11.338967,44.491921], [11.352999,44.491949] ];
+        for (var i = 0; i < locs.length; i++) {
+          locs[i] = ol.proj.transform(locs[i], 'EPSG:4326', 'EPSG:3857');
+        }
+        var featureLine = new ol.Feature({
+          geometry: new ol.geom.LineString(locs)
+        });
+
+        var vectorLine = new ol.source.Vector({});
+        vectorLine.addFeature(featureLine);
+
+        var vectorLineLayer = new ol.layer.Vector({
+          source: vectorLine,
+          style: new ol.style.Style({
+              fill: new ol.style.Fill({ color: '#00FF00', weight: 4 }),
+              stroke: new ol.style.Stroke({ color: '#00FF00', width: 2 })
+          })
+        });
+        map.addLayer(vectorLineLayer);
+      }
+
+    </script>
+
+  </body>
+</html>
+
+
+
+<!-- selectedBike NON È L'INDICE DI bikes[] quindi dove usi bikes[selectedBike] modifica
+  con una ricerca dell'indice di bikes che contiene la bike con l'ID desiderato e usa tale indice in bike[]
+  -->

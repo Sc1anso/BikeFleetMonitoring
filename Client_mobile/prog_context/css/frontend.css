@@ -1,0 +1,52 @@
+#topbar{
+	background-color: lightblue;
+}
+
+#map {
+		height: 100vh;
+    width: 100%;
+}
+
+.layers{
+    background-color: #b3d1ff;
+}
+
+.bikeControl{
+    background-color: #ff9999;
+}
+
+.bikeUI ul{
+	padding-left: 0px;
+}
+
+.btn-group-vertical{
+	display: grid;
+}
+
+#rack_info{
+	background: blanchedalmond;
+	font-family: Roboto;
+}
+
+.r_info{
+	margin-top: 1em;
+
+}
+
+.align{
+	font-family: Roboto;
+	background: blanchedalmond;
+	width: 100%;
+	padding-left: 15%;
+	padding-right: 15%;
+	margin: 0%;
+}
+
+.spacer{
+	margin-top: 1em;
+}
+
+#racks-cont{
+	font-family: Roboto;
+	background: blanchedalmond;
+}

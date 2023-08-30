@@ -1,0 +1,1459 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- OpenLayers CSS -->
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.6.1/css/ol.css" type="text/css"> -->
+    <link rel="stylesheet" href="ol.css"> 
+    <!-- CSS -->
+    <link href="frontend.css" rel="stylesheet">
+
+    <title>Front-End</title>
+  </head>
+  <body>
+    
+    <div class="container-fluid">
+
+      <div id="widgetUI" class="container-fluid pt-1">
+
+        <div id="bikeInfo">
+        
+          <div class="text-center">
+            <h3>Gestione bici</h3>
+          </div>
+
+          <form class="border border-2 rounded">
+            <div class="row">
+              <div class="col-10">
+                <input style="font-size: 26px;" id="input_bici" type="number" min="1" max="999" placeholder="Digita ID o clicca una bici sulla mappa" class="ms-1 w-100">
+              </div>
+              <div class="col-2 d-flex justify-content-end align-items-center">
+                <button id="bikeSelector" class="btn btn-sm btn-primary me-1">Invia</button>
+              </div>
+            </div>
+          </form>
+
+          <div id="msgError" class="d-none text-center">
+            <p style="color: red;">Nessuna bici ha l'ID selezionato</p>
+          </div>
+
+          <div id="bikeList" class="mt-2 d-none h-50">
+
+            <dl class="h-100">
+
+              <dt id="bikeId">ID:</dt>
+              <dd id="bikeId_value" class="bikelist"></dd>
+
+              <dt id="bikeStatus">Stato:</dt>
+              <dd id="bikeStatus_value" class="bikelist"></dd>
+
+              <dt id="bikeLocation">Posizione:</dt>
+              <dd id="bikeLocation_value" class="bikelist"></dd>
+
+              <dt id="bikeStartRack">Punto di partenza:</dt>
+              <dd id="bikeStartRack_value" class="bikelist"></dd>
+
+              <dt id="bikeRents">Noleggi:</dt>
+              <dd id="bikeRents_value" class="bikelist"></dd>
+
+            </dl>
+
+            <select id="selectRent"></select>
+            <a id="viewRent" class="btn btn-sm py-0 shadow-none" href="#" role="button">
+              <img src="media/map-fill.svg" alt="View" title="Visualizza percorso" style="max-height: 12px;">
+            </a>
+
+          </div>
+
+          <div id="bikesOut">
+
+            <ul id="bikesOut_list"></ul>
+
+          </div>
+
+        </div>
+
+        <div id="pathInfo" class="mt-2">
+
+          <div class="text-center">
+            <h3>Gestione noleggi</h3>
+          </div>
+
+          <table id="pathList" class="table text-center align-text-bottom">
+            <thead>
+              <tr>
+                <th scope="col">ID Bici</th>
+                <th scope="col">N° noleggio</th>
+                <th scope="col"><a href="#"><img src="media/x-circle.svg" alt="Remove all paths" height="22" title="Rimuovi tutti i percorsi" onclick="removeRents()"></a></th>
+              </tr>
+            </thead>
+            <tbody id="tabRent"></tbody>
+          </table>
+
+        </div>
+
+        <div id="newLayers" class="mt-2">
+
+          <div class="text-center">
+            <h3>Gestione elementi aggiunti</h3>
+          </div>
+
+          <div class="btn-control text-center">
+            <button id="add_new_rack" class="btn btn-primary">Aggiungi rastrelliera</button>
+            <button id="add_new_geofence" class="btn btn-primary mt-2">Aggiungi geofence</button>
+          </div>
+
+          <div id="racksInfo" class="text-center mt-2">
+            <span class="subtitle">Gestione rastrelliere</span>
+            <ul id="racksList"></ul>
+          </div>
+
+          <div id="polygonsInfo" class="text-center my-2">
+            <span class="subtitle">Gestione geofences</span>
+            <ul id="polygonsList"></ul>
+          </div>
+        </div>
+
+        <div class="text-center" style="position: fixed; bottom: 0;">
+          <button class="btn btn-sm btn-primary" onclick="startSimulation()">Inizia la simulaz.</button>
+          <button class="btn btn-sm btn-danger" onclick="stopSimulation()">Ferma la simulaz.</button>
+        </div>
+      </div>
+
+      <div id="widgetUI_controller" class="d-flex justify-content-center align-items-center">
+        <img id="caret" src="media/caret-left-fill.svg" alt="Compress sidebar" height="14" title="Comprimi barra laterale">
+      </div>
+
+      <div id="map">
+        <div id="popup" class="ol-popup">
+          <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+          <div id="popup-content" class="d-flex">
+            <input id="new_feature" type="text" placeholder="" autocomplete="off">
+            <button id="set_new_el" class="btn btn-sm btn-primary ms-2">Conferma</button>
+          </div>
+          <div id="form-geofence">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="radioPoly" id="radioPOI" value="poi" title="POI" checked>
+              <label class="form-check-label" for="radioPOI">POI</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="radioPoly" id="radioFA" value="fa" title="Aree vietate">
+              <label class="form-check-label" for="radioFA">Aree vietate</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- Bootstrap JS -->
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- OpenLayers JS  -->
+    <!-- <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.6.1/build/ol.js"></script> -->
+    <script src="./ol.js"></script>
+
+    <script type="text/javascript" src="qgis/layers/fa_density_1.js"></script>
+    <script type="text/javascript" src="qgis/layers/poi_density_0.js"></script>
+    <script type="text/javascript" src="qgis/layers/kmeans_2.js"></script>
+    <script type="text/javascript" src="qgis/resources/functions.js"></script>
+    <script type="text/javascript" src="qgis/styles/fa_density_1_style.js"></script>
+    <script type="text/javascript" src="qgis/styles/poi_density_0_style.js"></script>
+    <script type="text/javascript" src="qgis/styles/kmeans_2_style.js"></script>
+    <script type="text/javascript" src="assets/styles.js"></script>
+    <script type="text/javascript" src="assets/controls.js"></script>
+    <script type="text/javascript" src="assets/simulation_locs.js"></script>
+    <script type="text/javascript" src="assets/functions.js"></script>
+
+    <script type="text/javascript">
+
+      const wui_btn = document.getElementById("widgetUI_controller");
+      const wui = document.getElementById("widgetUI");
+      const msgError = document.getElementById("msgError");
+      const viewRent = document.getElementById("viewRent");
+      const tabRent = document.getElementById("tabRent");
+      const selectRent = document.getElementById("selectRent");
+      const container_popup = document.getElementById('popup');
+      const content_popup = document.getElementById('popup-content');
+      const closer_popup = document.getElementById('popup-closer');
+      const btn_new_el = document.getElementById("set_new_el");
+      const input_new_feature = document.getElementById("new_feature");
+      const add_new_rack = document.getElementById("add_new_rack");
+      const add_new_geofence = document.getElementById("add_new_geofence");
+      const form_geofence = document.getElementById("form-geofence");
+      const bikeSelector = document.getElementById("bikeSelector");
+      const input_bici = document.getElementById("input_bici");
+      var widgetUI_direction = "toLeft";
+      var selectedRents_list = [];
+      var bikes_out_of_range = [];
+      //var racks = [];
+      var pois = [];
+      var forbiden_areas = [];
+      var bikes = [];
+      var new_rack = false;
+      var new_geofence = false;
+      var flag_modifying = false;
+      var tmp_geofence;
+      var tmp_locs;
+      var modifying_added_rack_coords;
+      var modifying_added_rack_name;
+      var modifying_added_geofence_layer;
+      var modifying_added_geofence_name;
+      var Interval_sim_ID;
+      var maxDist = 1100; //meters
+      var flag_evtPropagation = 0;
+      var selectedBike = -1;
+      var geoMarkers_Bikes = {
+        "type": "FeatureCollection",
+        "features": []
+      };
+
+      // OpenStreetMap
+      const osmLayer = new ol.layer.Tile({
+        source: new ol.source.OSM(),
+        visible: true,
+        zIndex: 2
+      });
+
+      // Overlays
+      const popupOverlay = new ol.Overlay({
+        element: container_popup,
+        autoPan: true,
+        autoPanAnimation: {
+          duration: 250,
+        }
+      });
+
+      // Vectors
+      const racksVector = new ol.layer.Vector({
+        title: "Bike Racks",
+        source: new ol.source.Vector({
+          url: "assets/rastrelliere.json",
+          format: new ol.format.GeoJSON()
+        }),
+        visible: true,
+        style: bikeStyle,
+        zIndex: 1
+      });
+
+      const poiVector = new ol.layer.Vector({
+        title: 'POI',
+        // source: new ol.source.Vector({
+        //   url: "assets/POI.json",
+        //   format: new ol.format.GeoJSON()
+        // }),
+        visible: true,
+        style: POIStyle,
+        zIndex: 1
+      });
+
+      const faVector = new ol.layer.Vector({
+        title: 'Forbidden_Area',
+        // source: new ol.source.Vector({
+        //   url: "assets/forbidden.json",
+        //   format: new ol.format.GeoJSON()
+        // }),
+        visible: true,
+        style: forbiddenStyle,
+        zIndex: 1
+      });
+
+      const vectorLine = new ol.source.Vector({});
+
+      const vectorLineLayer = new ol.layer.Vector({
+        source: vectorLine,
+        style: rent_Style,
+        zIndex: 8
+      });
+
+      const vectorSource = new ol.source.Vector({});
+
+      const geoLayer = new ol.layer.Vector({});
+
+      // Interaction Draw
+      const draw_source = new ol.source.Vector({});
+
+      const drawnVector = new ol.layer.Vector({
+        source: draw_source,
+        visible: false,
+        zIndex: 10
+      });
+
+      const draw = new ol.interaction.Draw({
+        source: draw_source,
+        type: "Polygon",
+      });
+
+      // Vectors from QGIS
+      const poi_density_source = new ol.source.Vector({
+        features: new ol.format.GeoJSON().readFeatures(json_poi_density_0, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'}),
+      });
+
+      const poiVector_density = new ol.layer.Vector({
+        title: 'POI_density',
+        source: poi_density_source,
+        style: style_poi_density_0,
+        visible: false,
+        zIndex: 6
+      });
+
+      const fa_density_source = new ol.source.Vector({
+        features: new ol.format.GeoJSON().readFeatures(json_fa_density_1, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'}),
+      });
+
+      const faVector_density = new ol.layer.Vector({
+        title: 'Forbidden_density',
+        source: fa_density_source,
+        style: style_fa_density_1,
+        visible: false,
+        zIndex: 6
+      });
+
+      const kmeans_source = new ol.source.Vector({
+        features: new ol.format.GeoJSON().readFeatures(json_kmeans_2, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'}),
+      });
+
+      const kmeansVector = new ol.layer.Vector({
+        title: 'KMeans',
+        source: kmeans_source,
+        style: style_kmeans_2,
+        visible: false,
+        zIndex: 13
+      });
+
+      // Map
+      const map = new ol.Map({
+        controls: ol.control.defaults().extend([new VectorControls(), new Legend()]),
+        target: "map",
+        layers: [racksVector, poiVector, faVector, osmLayer, poiVector_density, faVector_density, kmeansVector, vectorLineLayer, drawnVector],
+        view: new ol.View({
+          center: ol.proj.fromLonLat([11.34369993944896, 44.494199018227775]),
+          zoom: 14
+        }),
+        overlays: [popupOverlay],
+      });
+
+      function setRacks() {
+        // Case first call: racksVector is 'visible' but under the map (Initial State)
+        if(racksVector.getZIndex() < 2) {
+          racksVector.setZIndex(4);
+          return;
+        }
+        // All other cases
+        if(racksVector.getVisible() == false){
+          racksVector.setVisible(true);
+        }
+        else{
+          racksVector.setVisible(false);
+        }
+      }
+
+      function setPOI() {
+        // Case first call: poiVector is 'visible' but under the map (Initial State)
+        if(poiVector.getZIndex() < 2) {
+          poiVector.setZIndex(6);
+          return;
+        }
+        // All other cases
+        if(poiVector.getVisible() == false){
+          poiVector.setVisible(true);
+        }
+        else{
+          poiVector.setVisible(false);
+        }
+      }
+
+      function setForbidden() {
+        // Case first call: faVector is 'visible' but under the map (Initial State)
+        if(faVector.getZIndex() < 2) {
+          faVector.setZIndex(6);
+          return;
+        }
+        // All other cases
+        if(faVector.getVisible() == false){
+          faVector.setVisible(true);
+        }
+        else{
+          faVector.setVisible(false);
+        }
+      }
+
+      function setPOI_density() {
+        if(poiVector_density.getVisible() == false){
+          poiVector_density.setVisible(true);
+          document.getElementById("ul_poi").classList.remove("d-none");
+        }
+        else{
+          poiVector_density.setVisible(false);
+          document.getElementById("ul_poi").classList.add("d-none");
+        }
+      }
+
+      function setForbidden_density() {
+        if(faVector_density.getVisible() == false){
+          faVector_density.setVisible(true);
+          document.getElementById("ul_forbidden").classList.remove("d-none");
+        }
+        else{
+          faVector_density.setVisible(false);
+          document.getElementById("ul_forbidden").classList.add("d-none");
+        }
+      }
+
+      function setKMeans() {
+        if(kmeansVector.getVisible() == false) {
+          kmeansVector.setVisible(true);
+          document.getElementById("ul_kmeans").classList.remove("d-none");
+        }
+        else {
+          kmeansVector.setVisible(false);
+          document.getElementById("ul_kmeans").classList.add("d-none");
+        }
+      }
+
+      // Sidebar animation
+      wui_btn.addEventListener("click", (e) => {
+        wui_btn.classList.remove("move_button");
+        wui_btn.offsetWidth = wui_btn.offsetWidth;
+        wui.classList.remove("move_sidebar");
+        wui.offsetWidth = wui.offsetWidth;
+
+        if(widgetUI_direction == "toLeft"){
+          widgetUI_direction = "toRight";
+          wui_btn.style.animationDirection = "";
+          wui.style.animationDirection = "";
+          document.getElementById("caret").setAttribute("src", "media/caret-right-fill.svg");
+        }
+        else{
+          widgetUI_direction = "toLeft";
+          wui_btn.style.animationDirection = "reverse";
+          wui.style.animationDirection = "reverse";
+          document.getElementById("caret").setAttribute("src", "media/caret-left-fill.svg");
+        }
+        wui_btn.classList.add("move_button");
+        wui.classList.add("move_sidebar");
+      });
+
+      // Bikes
+      bikeSelector.addEventListener("click", async(e) => {
+        e.preventDefault();
+        var selectedId = input_bici.value;
+        var index = bikes.findIndex(el => el.id == selectedId);
+        try {
+          await update_WidgetUI(index);
+          var bike = bikes[index];
+          update_center_map(bike.lon, bike.lat);
+          set_NewSelectedBike(vectorSource.getFeatureById(bike.id), bike);
+        }
+        catch(error) {
+          console.log(error);
+        }
+      });
+
+      document.getElementById("bikesOut_list").addEventListener("click", (e) => {
+        var li = e.target.closest("li");
+        var id = parseInt(li.querySelector(".ofr-id").textContent);
+        var index = bikes.findIndex(el => el.id == id);
+        var bike = bikes[index];
+        update_center_map(bike.lon, bike.lat);
+      });
+
+      // Rents
+      viewRent.addEventListener("click", (e) => {
+        e.preventDefault();
+        var selectedRent = document.getElementById("selectRent").value;
+        if(selectedRent == "") {
+          return;
+        }
+        var rent = {
+          "id_bike": selectedBike,
+          "n_rent": parseInt(selectedRent)
+        };
+        if(!selectedRents_list.includes(JSON.stringify(rent))){
+          const row = document.createElement("tr");
+          const td = document.createElement("td");
+          const id_bike = td.cloneNode();
+          id_bike.classList.add("id-bike");
+          id_bike.textContent = selectedBike;
+          const n_rent = td.cloneNode();
+          n_rent.classList.add("n-rent");
+          n_rent.textContent = selectedRent;
+          const btn = td.cloneNode();
+          const btn_remove = document.createElement("button");
+          btn_remove.setAttribute("type", "button");
+          btn_remove.classList.add("btn-close", "align-middle", "shadow-none");
+          btn.appendChild(btn_remove);
+          row.setAttribute("data-rent", JSON.stringify(rent));
+          row.appendChild(id_bike);
+          row.appendChild(n_rent);
+          row.appendChild(btn_remove);
+          tabRent.appendChild(row);
+          selectedRents_list.push(JSON.stringify(rent));
+          //show on map
+          var index = bikes.findIndex(el => el.id == selectedBike);
+          drawRoute(bikes[index], selectedRent);
+        }
+      });
+
+      tabRent.addEventListener("mouseover", (e) => {
+        var row = e.target.closest("tr");
+        row.style.backgroundColor = "#cce6ff";
+        var feature = vectorLine.getFeatureById(row.getAttribute("data-rent"));
+        // feature.getStyle().getStroke().setColor('#e6e6fa'); Not working, don't know why.
+        feature.setStyle(
+          new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#3399ff',
+              width: 3
+            })
+          }) 
+        );
+      });
+
+      tabRent.addEventListener("mouseout", (e) => {
+        var row = e.target.closest("tr");
+        row.style.backgroundColor = "initial";
+        var feature = vectorLine.getFeatureById(row.getAttribute("data-rent"));
+        // feature.getStyle().getStroke().setColor('#339933'); Not working, don't know why.
+        feature.setStyle(
+          new ol.style.Style({
+            stroke: new ol.style.Stroke({
+              color: '#339933',
+              width: 3
+            })
+          }) 
+        );
+      });
+
+      tabRent.addEventListener("click", (e) => {
+        if(e.target.classList.contains("btn-close")){
+          var row = e.target.closest("tr");
+          var id_bike = e.target.previousElementSibling.previousElementSibling.textContent;
+          var n_rent = e.target.previousElementSibling.textContent;
+          var rent = {
+            "id_bike": parseInt(id_bike),
+            "n_rent": parseInt(n_rent)
+          };
+          var index = selectedRents_list.indexOf(JSON.stringify(rent));
+          if(index > -1){
+            selectedRents_list.splice(index, 1);
+            row.remove();
+            var feature = vectorLine.getFeatureById(JSON.stringify(rent));
+            vectorLine.removeFeature(feature);
+          }
+        }
+      });
+
+      // Racks
+      add_new_rack.addEventListener("click", (e) => {
+        if(!new_rack) {
+          if(new_geofence) {
+            map.removeInteraction(draw);
+            if(tmp_geofence != undefined) {
+              draw_source.removeFeature(tmp_geofence);
+            }
+            close_popup();
+          }
+          document.getElementById("map").style.cursor = "crosshair";
+          if(!form_geofence.classList.contains("d-none")) {
+            form_geofence.classList.add("d-none");
+          }
+          new_rack = true;
+        }
+        else {
+          close_popup();
+        }
+      });
+
+      document.getElementById("racksList").addEventListener("click", async(e) => {
+        // MODIFY
+        if(e.target.classList.contains("btn-rackInfo-modify")) {
+          if(flag_modifying) {
+            return;
+          }
+          else {
+            flag_modifying = true;
+          }
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_coords = li.querySelector(".dd-coords");
+          var btn_apply = document.createElement("button");
+          btn_apply.classList.add("btn", "btn-sm", "btn-apply", "btn-primary");
+          btn_apply.textContent = "Applica"
+          var btn_cancel = document.createElement("button");
+          btn_cancel.classList.add("btn", "btn-sm", "btn-cancel", "btn-danger");
+          btn_cancel.textContent = "Annulla";
+          while(div.firstChild) {
+            div.removeChild(div.firstChild);
+          }
+          div.appendChild(btn_cancel);
+          div.appendChild(btn_apply);
+          li.classList.add("outline");
+          modifying_added_rack_coords = dd_coords.textContent;
+          modifying_added_rack_name = dd_name.textContent;
+          var input_name = document.createElement("input");
+          input_name.classList.add("input-rackname");
+          input_name.setAttribute("type", "text");
+          input_name.value = dd_name.textContent;
+          var input_coords = document.createElement("input");
+          input_coords.classList.add("input-rackcoords");
+          input_coords.setAttribute("type", "text");
+          input_coords.value = dd_coords.textContent;
+          dd_name.replaceChild(input_name, dd_name.firstChild);
+          dd_coords.replaceChild(input_coords, dd_coords.firstChild);
+        }
+        // APPLY
+        if(e.target.classList.contains("btn-apply")) {
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_coords = li.querySelector(".dd-coords");
+          var dd_address = li.querySelector(".dd-address");
+          var input_name = dd_name.querySelector(".input-rackname");
+          var input_coords = dd_coords.querySelector(".input-rackcoords");
+          var regex = /([\d\.])+/g;
+          var lat_n_lon = input_coords.value.match(regex);
+          var msgError = li.querySelector(".msgError_name");
+          var msgError_text = msgError.querySelector("p");
+          if(lat_n_lon == null) {
+            msgError_text.textContent = "Inserisci delle coordinate valide";
+            msgError.classList.remove("d-none");
+            return;
+          }
+          else if(lat_n_lon.length != 2) {
+            msgError_text.textContent = "Inserisci delle coordinate valide";
+            msgError.classList.remove("d-none");
+            return;
+          }
+          else if((input_name.value != modifying_added_rack_name) && check_rack_duplicate(input_name.value)) {
+            msgError_text.textContent = "Questo nome è già assegnato ad un altra rastrelliera";
+            msgError.classList.remove("d-none");
+            return;
+          }
+          // Valid name & coordinates
+          else {
+            // UPDATE DB
+            var new_geojson = {
+              "name": input_name.value,
+              "lat": String(parseFloat(lat_n_lon[0]).toFixed(6)),
+              "lon": String(parseFloat(lat_n_lon[1]).toFixed(6)),
+              "old_name": modifying_added_rack_name
+            }
+            await modify_rack(JSON.stringify(new_geojson));
+            // Feature
+            var rack_feature = get_rack_by_name(modifying_added_rack_name);
+            if(modifying_added_rack_name != input_name.value) {
+              rack_feature.set("name", input_name.value);
+            }
+            var tmp_coords_string = String(parseFloat(lat_n_lon[0]).toFixed(6)) + ", " + String(parseFloat(lat_n_lon[1]).toFixed(6));
+            rack_feature.getGeometry().setCoordinates(ol.proj.transform([lat_n_lon[1], lat_n_lon[0]], 'EPSG:4326', 'EPSG:3857'));
+            // WUI - Content
+            dd_name.textContent = input_name.value;
+            dd_coords.textContent = tmp_coords_string;
+            try{
+              dd_address.textContent = await reverseGeocoding(lat_n_lon[0], lat_n_lon[1]);
+            }
+            catch(error) {
+              console.log(error);
+            }
+            // WUI - Buttons
+            while(div.firstChild) {
+              div.removeChild(div.firstChild);
+            }
+            var btn_delete = document.createElement("button");
+            btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-rackInfo-delete");
+            btn_delete.textContent = "Elimina";
+            var btn_modify = document.createElement("button");
+            btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-rackInfo-modify");
+            btn_modify.textContent = "Modifica";
+            div.appendChild(btn_delete);
+            div.appendChild(btn_modify);
+            // WUI - Other
+            if(!(msgError.classList.contains("d-none"))) {
+              msgError.classList.add("d-none");
+            }
+            li.classList.remove("outline");
+            // Reset variables
+            flag_modifying = false;
+            modifying_added_rack_name = undefined;
+            modifying_added_rack_coords = undefined;
+          }
+        }
+        // DELETE
+        if(e.target.classList.contains("btn-rackInfo-delete")) {
+          if(flag_modifying) {
+            return;
+          }
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          // UPDATE DB
+          await remove_rack(dd_name.textContent);
+          // Feature
+          var rack_feature = get_rack_by_name(dd_name.textContent);
+          racksVector.getSource().removeFeature(rack_feature);
+          // WUI
+          while(li.firstChild) {
+            li.removeChild(li.firstChild);
+          }
+          li.remove();
+        }
+        // CANCEL
+        if(e.target.classList.contains("btn-cancel")) {
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_coords = li.querySelector(".dd-coords");
+          dd_name.textContent = modifying_added_rack_name;
+          dd_coords.textContent = modifying_added_rack_coords;
+          var msgError = li.querySelector(".msgError_name");          
+          if(!(msgError.classList.contains("d-none"))) {
+            msgError.classList.add("d-none");
+          }
+          li.classList.remove("outline");
+          while(div.firstChild) {
+            div.removeChild(div.firstChild);
+          }
+          var btn_delete = document.createElement("button");
+          btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-rackInfo-delete");
+          btn_delete.textContent = "Elimina";
+          var btn_modify = document.createElement("button");
+          btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-rackInfo-modify");
+          btn_modify.textContent = "Modifica";
+          div.appendChild(btn_delete);
+          div.appendChild(btn_modify);
+          flag_modifying = false;
+          modifying_added_rack_name = undefined;
+          modifying_added_rack_coords = undefined;
+        }
+      });
+
+      // Geofences
+
+      draw.addEventListener("drawend", (e) => {
+        map.removeInteraction(draw);
+        var feature = e.feature;
+        var extent = feature.getGeometry().getExtent();
+        var center = ol.extent.getCenter(extent);
+        input_new_feature.placeholder = "Nome del geofence";
+        popupOverlay.setPosition(center);
+        tmp_geofence = feature;
+        input_new_feature.focus();
+        document.addEventListener("click", click_to_close_popup);
+      });
+
+      add_new_geofence.addEventListener("click", (e) => {
+        if(!new_geofence) {
+          if(new_rack) {
+            close_popup();
+          }
+          new_geofence = true;
+          drawnVector.setVisible(true);
+          map.addInteraction(draw);
+        }
+        else {
+          map.removeInteraction(draw);
+          close_popup();
+        }
+      });
+
+      document.getElementById("polygonsList").addEventListener("click", async(e) => {
+        // MODIFY
+        if(e.target.classList.contains("btn-polygonInfo-modify")) {
+          if(flag_modifying) {
+            return;
+          }
+          else {
+            flag_modifying = true;
+          }
+          // WUI - Buttons
+          var div = e.target.closest("div");
+          var li = div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_layer = li.querySelector(".dd-layer");
+          var btn_apply = document.createElement("button");
+          btn_apply.classList.add("btn", "btn-sm", "btn-apply", "btn-primary");
+          btn_apply.textContent = "Applica"
+          var btn_cancel = document.createElement("button");
+          btn_cancel.classList.add("btn", "btn-sm", "btn-cancel", "btn-danger");
+          btn_cancel.textContent = "Annulla";
+          while(div.firstChild) {
+            div.removeChild(div.firstChild);
+          }
+          div.appendChild(btn_cancel);
+          div.appendChild(btn_apply);
+          li.classList.add("outline");
+          // Temporal variables
+          modifying_added_geofence_name = dd_name.textContent;
+          modifying_added_geofence_layer = dd_layer.textContent;
+          // WUI - Content
+          var input = document.createElement("input");
+          var label = document.createElement("label");
+          label.classList.add("form-check-label");
+          var input_name = input.cloneNode();
+          input_name.classList.add("input-geofence");
+          input_name.setAttribute("type", "text");
+          input_name.value = dd_name.textContent;
+          var div_form = document.createElement("div"); 
+          var form_check_poi = document.createElement("div");
+          form_check_poi.classList.add("form-check");
+          var form_check_fa = document.createElement("div");
+          form_check_fa.classList.add("form-check");
+          var input_poi = document.createElement("input");
+          input_poi.classList.add("form-check-input");
+          input_poi.setAttribute("type", "radio");
+          input_poi.setAttribute("name", "modify-geofence");
+          input_poi.setAttribute("value", "poi");
+          input_poi.setAttribute("title", "POI");
+          if(modifying_added_geofence_layer == "POI") {
+            input_poi.checked = true;
+          }
+          var input_fa = document.createElement("input");
+          input_fa.classList.add("form-check-input");
+          input_fa.setAttribute("type", "radio");
+          input_fa.setAttribute("name", "modify-geofence");
+          input_fa.setAttribute("value", "fa");
+          input_fa.setAttribute("title", "Aree vietate");
+          if(modifying_added_geofence_layer == "Aree vietate") {
+            input_fa.checked = true;
+          }
+          var label_poi = label.cloneNode();
+          label_poi.textContent = "POI";
+          var label_fa = label.cloneNode();
+          label_fa.textContent = "Aree vietate";
+          // WUI - Append everything
+          form_check_poi.appendChild(input_poi);
+          form_check_poi.appendChild(label_poi);
+          form_check_fa.appendChild(input_fa);
+          form_check_fa.appendChild(label_fa);
+          div_form.appendChild(form_check_poi);
+          div_form.appendChild(form_check_fa);
+          dd_name.replaceChild(input_name, dd_name.firstChild);
+          dd_layer.replaceChild(div_form, dd_layer.firstChild);
+        }
+        // APPLY
+        if(e.target.classList.contains("btn-apply")) {
+          var div = e.target.closest("div");
+          var li = div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var input_name = li.querySelector(".input-geofence").value;
+          var dd_layer = li.querySelector(".dd-layer");
+          var dd_layer_value = dd_layer.querySelector('input[name="modify-geofence"]:checked').value; // 'poi' o 'fa'
+          var dd_layer_title = dd_layer.querySelector('input[name="modify-geofence"]:checked').title; // 'POI' o 'Aree vietate'
+          var msgError = li.querySelector(".msgError_name");
+          var msgError_text = msgError.querySelector("p");
+          var type = dd_layer_value;
+          // Variables
+          var feature;
+          var old_data;
+          var data;
+          var old_type = type;
+          var check_duplicate;
+          var layer_changed = (modifying_added_geofence_layer != dd_layer_title);
+          var name_changed = (input_name != modifying_added_geofence_name);
+          if(!layer_changed && !name_changed) {
+            return;
+          }
+          if(type == "poi") {
+            data = poiVector;
+            check_duplicate = check_poi_duplicate;
+            if(layer_changed) {
+              old_type = "fa";
+              old_data = faVector;
+              feature = get_fa_by_name(modifying_added_geofence_name);
+            }
+            else {
+              feature = get_poi_by_name(modifying_added_geofence_name);
+            }
+          }
+          else if(type == "fa") {
+            data = faVector;
+            check_duplicate = check_fa_duplicate;
+            if(layer_changed) {
+              old_type = "poi";
+              old_data = poiVector;
+              feature = get_poi_by_name(modifying_added_geofence_name);
+            }
+            else {
+              feature = get_fa_by_name(modifying_added_geofence_name);
+            }
+          }
+          // Not valid name - empty
+          if(input_name == "") {
+            msgError_text.textContent = "Devi assegnare un nome valido al geofence";
+            msgError.classList.remove("d-none");
+            return;
+          }
+          // Not valid name - duplicate
+          else if((name_changed || layer_changed) && check_duplicate(input_name)) {
+            msgError_text.textContent = "Questo nome è già assegnato ad un altro geofence";
+            msgError.classList.remove("d-none");
+            return;
+          }
+          // Valid name - UPDATE DB, Add(/Remove) Feature and Update WUI
+          // UPDATE DB
+          var new_geojson = {
+            "name": input_name,
+            "old_name": modifying_added_geofence_name,
+            "type": type,
+            "old_type": old_type,
+            "type_change": layer_changed
+          }
+          await modify_geofence(new_geojson);
+          // Feature
+          if(name_changed) {
+            feature.set("name", input_name);
+          }
+          if(layer_changed) {
+            old_data.getSource().removeFeature(feature);
+            data.getSource().addFeature(feature);
+          }
+          // WUI - Content
+          dd_name.textContent = input_name;
+          dd_layer.textContent = dd_layer_title;
+          // WUI - Buttons
+          var btn_delete = document.createElement("button");
+          btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-polygonInfo-delete");
+          btn_delete.textContent = "Elimina";
+          var btn_modify = document.createElement("button");
+          btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-polygonInfo-modify");
+          btn_modify.textContent = "Modifica";
+          while(div.firstChild) {
+            div.removeChild(div.firstChild);
+          }
+          div.appendChild(btn_delete);
+          div.appendChild(btn_modify);
+          // WUI - Other
+          if(!msgError.classList.contains("d-none")) {
+            msgError.classList.add("d-none");
+          }
+          li.classList.remove("outline");
+          // Reset variables
+          modifying_added_geofence_name = undefined;
+          modifying_added_geofence_layer = undefined;
+          flag_modifying = false;
+        }
+        // CANCEL
+        if(e.target.classList.contains("btn-cancel")) {
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_layer = li.querySelector(".dd-layer");
+          var msgError = li.querySelector(".msgError_name");
+          // WUI - Content
+          dd_name.textContent = modifying_added_geofence_name;
+          dd_layer.textContent = modifying_added_geofence_layer;
+          // WUI - Other
+          if(!msgError.classList.contains("d-none")) {
+            msgError.classList.add("d-none");
+          }
+          li.classList.remove("outline");
+          // WUI - Buttons
+          var btn_delete = document.createElement("button");
+          btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-polygonInfo-delete");
+          btn_delete.textContent = "Elimina";
+          var btn_modify = document.createElement("button");
+          btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-polygonInfo-modify");
+          btn_modify.textContent = "Modifica";
+          while(div.firstChild) {
+            div.removeChild(div.firstChild);
+          }
+          div.appendChild(btn_delete);
+          div.appendChild(btn_modify);
+          // Reset variables
+          modifying_added_geofence_name = undefined;
+          modifying_added_geofence_layer = undefined;
+          flag_modifying = false;
+        }
+        // DELETE
+        if(e.target.classList.contains("btn-polygonInfo-delete")) {
+          if(flag_modifying) {
+            return;
+          }
+          var div = e.target.closest("div");
+          var li =  div.closest("li");
+          var dd_name = li.querySelector(".dd-name");
+          var dd_layer = li.querySelector(".dd-layer");
+          var dd_layer_title = dd_layer.textContent;
+          // UPDATE DB
+          var type = "POI";
+          if(dd_layer_title == "Aree vietate") {
+            type = "aree_vietate";
+          }
+          var new_geojson = {
+            "name": dd_name.textContent,
+            "type": type
+          };
+          await remove_geofence(JSON.stringify(new_geojson));
+          // Feature
+          var feature_name = dd_name.textContent;
+          var feature;
+          var data;
+          if(dd_layer_title == "POI") {
+            data = poiVector;
+            feature = get_poi_by_name(feature_name);
+          }
+          else if(dd_layer_title == "Aree vietate") {
+            data = faVector;
+            feature = get_fa_by_name(feature_name);
+          }
+          data.getSource().removeFeature(feature);
+          // WUI
+          while(li.firstChild) {
+            li.removeChild(li.firstChild);
+          }
+          li.remove();
+        }
+      });
+
+      // Popup
+      closer_popup.addEventListener("click", (e) => {
+        if(new_geofence) {
+          draw_source.removeFeature(tmp_geofence);
+        }
+        close_popup();
+      })
+
+      btn_new_el.addEventListener("click", async(e) => {
+        if(new_rack) {
+          // Not valid name - empty
+          if(input_new_feature.value == "") {
+            input_new_feature.placeholder = "Devi dare un nome alla rastrelliera per aggiungerla";
+            if(!input_new_feature.classList.contains("new_feature")) {
+              input_new_feature.classList.add("new_feature");
+            }
+            return;
+          }
+          // Not valid name - duplicate
+          var name = input_new_feature.value;
+          if(check_rack_duplicate(name)) {
+            input_new_feature.value = "";
+            input_new_feature.placeholder = "Nome già esistente";
+            if(!input_new_feature.classList.contains("new_feature")) {
+              input_new_feature.classList.add("new_feature");
+            }
+            return;
+          }
+          // Valid name - UPDATE DB, Add feature and Update WUI
+          var tmp_coords = ol.proj.transform(tmp_locs, 'EPSG:3857', 'EPSG:4326');
+          // UPDATE DB
+          var new_geojson = {
+            "name": name,
+            "lat": tmp_coords[1],
+            "lon": tmp_coords[0]
+          }
+          await update_rack(JSON.stringify(new_geojson))
+          // Feature
+          var rack = {
+            "type": "Feature",
+            "geometry": {
+               "type": "Point",
+               "coordinates":  tmp_locs
+            },
+            "properties": {
+              "name": input_new_feature.value
+            }
+          }
+          var rack_feature = new ol.format.GeoJSON().readFeature(rack);
+          racksVector.getSource().addFeature(rack_feature);
+          // WUI
+          var ul = document.getElementById("racksList");
+          var li = document.createElement("li");
+          li.classList.add("p-1", "m-1");
+          var dl = document.createElement("dl");
+          var dt = document.createElement("dt");
+          var dd = document.createElement("dd");
+          // WUI - Values
+          var dt_name = dt.cloneNode();
+          dt_name.textContent = "Nome:";
+          dl.appendChild(dt_name);
+          var dd_name = dd.cloneNode();
+          dd_name.classList.add("dd-name");
+          dd_name.textContent = name;
+          dl.appendChild(dd_name);
+          var dt_coords = dt.cloneNode();
+          dt_coords.textContent = "Coordinate:";
+          dl.appendChild(dt_coords);
+          var dd_coords = dd.cloneNode();
+          var tmp_coords_string = String(tmp_coords[1].toFixed(6)) + ", " + String(tmp_coords[0].toFixed(6));
+          dd_coords.classList.add("dd-coords");
+          dd_coords.textContent = tmp_coords_string;
+          dl.appendChild(dd_coords);
+          var dt_address = dt.cloneNode();
+          dt_address.textContent = "Indirizzo:";
+          dl.appendChild(dt_address);
+          var dd_address = dd.cloneNode();
+          dd_address.classList.add("dd-address");
+          try{
+            dd_address.textContent = await reverseGeocoding(tmp_coords[1], tmp_coords[0]);
+          }
+          catch(error) {
+            console.log(error);
+          }
+          dl.appendChild(dd_address);
+          // WUI - Message error
+          var div_msgErr = document.createElement("div");
+          div_msgErr.classList.add("msgError_name", "d-flex", "justify-content-center", "d-none");
+          var msgErr = document.createElement("p");
+          msgErr.style.color = "red";
+          div_msgErr.appendChild(msgErr);
+          // WUI - Buttons
+          var btn_div = document.createElement("div");
+          btn_div.classList.add("btn-li-rackList", "d-flex", "justify-content-around");
+          var btn_delete = document.createElement("button");
+          btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-rackInfo-delete");
+          btn_delete.textContent = "Elimina";
+          var btn_modify = document.createElement("button");
+          btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-rackInfo-modify");
+          btn_modify.textContent = "Modifica";
+          btn_div.appendChild(btn_delete);
+          btn_div.appendChild(btn_modify);
+          // WUI - Append everything
+          li.appendChild(dl);
+          li.appendChild(div_msgErr);
+          li.appendChild(btn_div);
+          ul.appendChild(li);
+          // Close popup
+          close_popup();
+        }
+        else if(new_geofence) {
+          var type = document.getElementById("form-geofence").querySelector('input[name="radioPoly"]:checked').value;
+          var name = input_new_feature.value;
+          var exists = false;
+          // Not valid name - empty
+          if(input_new_feature.value == "") {
+            input_new_feature.placeholder = "Devi dare un nome al geofence per aggiungerlo";
+            if(!input_new_feature.classList.contains("new_feature")) {
+              input_new_feature.classList.add("new_feature");
+            }
+            return;
+          }    
+          if(type == "poi") {
+            exists = check_poi_duplicate(name);
+          }
+          else if(type == "fa") {
+            exists = check_fa_duplicate(name);
+          }
+          // Not valid name - duplicate
+          if(exists) {
+            input_new_feature.value = "";
+            input_new_feature.placeholder = "Nome già esistente";
+            if(!input_new_feature.classList.contains("new_feature")) {
+              input_new_feature.classList.add("new_feature");
+            }
+            return;
+          }
+          // Valid name - UPDATE DB, Add Feature and Update WUI
+          // UPDATE DB
+          var new_geometry = tmp_geofence.getGeometry().clone();
+          var tmp_coords = new_geometry.transform('EPSG:3857', 'EPSG:4326').getCoordinates()[0];
+          var new_geojson = {
+            "name": name,
+            "type": type,
+            "coords": tmp_coords
+          };
+          await update_geofence(JSON.stringify(new_geojson));
+          // Feature
+          tmp_geofence.set("name", name);
+          if(type == "poi") {
+            poiVector.getSource().addFeature(tmp_geofence);
+          }
+          else if(type == "fa") {
+            faVector.getSource().addFeature(tmp_geofence);
+          }
+          // WUI
+          var ul = document.getElementById("polygonsList");
+          var li = document.createElement("li");
+          var dl = document.createElement("dl");
+          var dd = document.createElement("dd");
+          var dt = document.createElement("dt");
+          li.classList.add("p-1", "m-1");
+          // WUI - Values
+          var dt_name = dt.cloneNode();
+          dt_name.textContent = "Nome:";
+          var dd_name = dd.cloneNode();
+          dd_name.classList.add("dd-name");
+          dd_name.textContent = name;
+          var dt_layer = dt.cloneNode();
+          dt_layer.textContent = "Layer:";
+          var dd_layer = dd.cloneNode();
+          dd_layer.classList.add("dd-layer");
+          dd_layer.textContent = document.querySelector('input[name="radioPoly"]:checked').title;
+          // WUI - Message error
+          var div_msgErr = document.createElement("div");
+          div_msgErr.classList.add("msgError_name", "d-flex", "justify-content-center", "d-none");
+          var msgErr = document.createElement("p");
+          msgErr.style.color = "red";
+          div_msgErr.appendChild(msgErr);
+          // WUI - Buttons
+          var btn_div = document.createElement("div");
+          btn_div.classList.add("btn-li-polygonsList", "d-flex", "justify-content-around");
+          var btn_delete = document.createElement("button");
+          btn_delete.classList.add("btn", "btn-sm", "btn-danger", "btn-polygonInfo-delete");
+          btn_delete.textContent = "Elimina";
+          var btn_modify = document.createElement("button");
+          btn_modify.classList.add("btn", "btn-sm", "btn-primary", "btn-polygonInfo-modify");
+          btn_modify.textContent = "Modifica";
+          btn_div.appendChild(btn_delete);
+          btn_div.appendChild(btn_modify);
+          // WUI - Append everything
+          dl.appendChild(dt_name);
+          dl.appendChild(dd_name);
+          dl.appendChild(dt_layer);
+          dl.appendChild(dd_layer);
+          li.appendChild(dl);
+          li.appendChild(div_msgErr);
+          li.appendChild(btn_div);
+          ul.appendChild(li);
+          // Close popup and Reset variables
+          close_popup();
+          drawnVector.setVisible(false);
+          draw_source.forEachFeature(el => {
+            draw_source.removeFeature(el);
+          })
+        }
+      });
+
+      // Map
+      map.on('click', async function (event) {
+        //event.stopImmediatePropagation() do not work (because of OpenLayers(?)) => flag_evtPropagation as a workaround
+        const feature = map.getFeaturesAtPixel(event.pixel)[0];
+        if(new_rack) {
+          const locs = map.getCoordinateFromPixel(event.pixel);
+          input_new_feature.placeholder = "Nome della rastrelliera";
+          popupOverlay.setPosition(locs);
+          input_new_feature.focus();
+          tmp_locs = locs;
+          document.addEventListener("click", click_to_close_popup);
+        }
+        else if(feature == undefined) {
+          return;
+        }
+        else if(feature.get("type") == "bike"){
+          var fill = feature.getStyle().getImage().getFill();
+          var radius = feature.getStyle().getImage().getRadius();
+          // Case 1. Bike from SELECTED to NOT SELECTED
+          if(feature.getId() == selectedBike){  
+            feature.setStyle(
+              new ol.style.Style({
+                image:
+                  new ol.style.Circle({
+                    radius: radius,
+                    fill: fill,
+                    stroke: bikeStroke
+                  })
+              })
+            );
+            selectedBike = -1;
+          }
+          // Case 2. Bike from NOT SELECTED to SELECTED
+          else {
+            var index = bikes.findIndex(el => el.id == feature.getId());
+            await update_WidgetUI(index);
+            var bike = bikes[index];
+            set_NewSelectedBike(vectorSource.getFeatureById(bike.id),bike);
+          }
+        }
+      });
+
+      function moveFeatures(event) {
+			  const vectorContext = ol.render.getVectorContext(event);
+			  vectorSource.forEachFeature(feature => {
+			  	vectorContext.setStyle(bike_styleFunction(feature));
+			    vectorContext.drawGeometry(feature.getGeometry());
+			  });
+			  map.render();
+			}
+
+			// INIT
+			function initBikes(){
+			  return new Promise((resolve, reject) => {
+			    const xhttp = new XMLHttpRequest();
+			    xhttp.onload = function() {
+			      bikes = [...JSON.parse(this.response)];
+			      bikes.forEach(el => { 
+			        let newFeature = {
+			          "type": "Feature",
+			          "geometry": {
+			            "type": "Point",
+			            "coordinates": [el["lon"], el["lat"]]
+			          },
+			          "id": el["id"]
+			        };
+			        geoMarkers_Bikes["features"].push(newFeature);
+			      });
+			      resolve();
+			    }
+			    xhttp.onerror = function() {
+			      console.log("Errore di connessione con il Back-End durante initbikes");
+			      reject("Qualcosa è andato storto");
+			    }
+			    xhttp.open("GET", "http://127.0.0.1:5000/initbikes");
+			    xhttp.send();
+			  })
+			}
+
+			async function init(){
+			  try{
+			    await initBikes(); // set bikes[] and geoMarkers_Bikes[]
+			    vectorSource.addFeatures(new ol.format.GeoJSON({featureProjection:"EPSG:3857"}).readFeatures(geoMarkers_Bikes));
+			    vectorSource.forEachFeature(feature => {
+			      feature.set("type", "bike");
+			      let idx = bikes.findIndex(bike => bike.id == feature.getId());
+			      let bike = bikes[idx];
+			      checkDistance(bike);
+			    });
+			    geoLayer.setSource(vectorSource);
+			    geoLayer.setStyle(bike_styleFunction);
+			    geoLayer.setZIndex(12);
+			    map.addLayer(geoLayer);
+			  } catch(error){
+			    console.log(error);
+			  }
+			}
+
+			// DB UPDATE
+			function db_update() {
+			  return new Promise((resolve, reject) => {
+			    updating_bikes = [];
+          simulationManager()
+			    new_locs.forEach(el => {
+			      if(el["update"]) {
+			        var idx = bikes.findIndex(bike => bike.id == el["id"]);
+			        var bike = bikes[idx];
+			        // Set VALUES to UPDATE and update variables
+			        var path_idx = el["index"];
+			        var new_lat = el["path"][path_idx][1];
+			        var new_lon = el["path"][path_idx][0];
+			        var current_rent;
+			        // if(bike.history.at(-1) != undefined) {
+			        //   current_rent = bike.history.at(-1);
+			        // }
+			        // else {
+			        //   current_rent = [];
+			        // }
+              if(el["new_path"]) {
+                current_rent = [];
+                bike.onService = true;
+                el["new_path"] = false;
+              }
+              else {
+                current_rent = bike.history.at(-1);
+              }
+			        el["index"] += 1;
+			        // Case rent has no more steps
+			        if(el["index"] >= el["path"].length) {
+			          el["update"] = false;
+			          bike.onService = false;
+			        }
+
+			        updating_bikes.push({"id": bike.id, "lat": new_lat, "lon": new_lon, "onService": bike.onService, "rent": current_rent});
+			      }
+			    });
+			      
+			    // UPDATE
+			    if(updating_bikes.length <= 0) {
+			      stopSimulation();
+			      return;
+			    }
+			    const xhttp = new XMLHttpRequest();
+			    xhttp.onload = function() {
+			      simStep += 1;
+			      resolve();
+			    }
+			    xhttp.onerror = function() {
+			      console.log("Errore di connessione con il Back-End durante l'update"); 
+			      reject("Qualcosa è andato storto");
+			    }
+			    xhttp.open("POST", "http://127.0.0.1:5000/update_bikes");
+			    xhttp.send(JSON.stringify(updating_bikes));
+			  });
+			}
+
+			function updateBikes() {
+			  return new Promise((resolve, reject) => {
+			    const xhttp = new XMLHttpRequest();
+			    xhttp.onload = function() {
+			      bikes = [...JSON.parse(this.response)];
+			      resolve();
+			    }
+			    xhttp.onerror = function() {
+			      console.log("Errore di connessione con il Back-End durante initbikes");
+			      reject("Qualcosa è andato storto");
+			    }
+			    xhttp.open("GET", "http://127.0.0.1:5000/initbikes");
+			    xhttp.send();
+			  });
+			}
+
+			async function map_rerender() {
+			  try {
+			    await updateBikes(); // set bikes[]
+			    // set Feature coordinates and update Bikes_Out-Of-Range
+			    vectorSource.forEachFeature(feature => {
+			      var idx = bikes.findIndex(bike => bike.id == feature.getId());
+			      var bike = bikes[idx];
+			      feature.getGeometry().setCoordinates(ol.proj.transform([bike.lon, bike.lat], 'EPSG:4326', 'EPSG:3857'));
+			      checkDistance(bike);
+			    });
+			  } catch(error) {
+			    console.log(error);
+			  }
+			}
+
+			// MAIN and SIMULATION
+
+			function stopSimulation() {
+			  clearInterval(Interval_sim_ID);
+			  Interval_sim_ID = null;
+			  geoLayer.un('postrender', moveFeatures);
+			}
+
+			async function sim_exec() {
+			  try {
+			    await db_update(); 
+			    await map_rerender();     
+			  } catch(error){
+			    console.log(error);
+			  }
+			}
+
+			async function init_simulation() {
+			  if(!Interval_sim_ID) {
+			    Interval_sim_ID = setInterval(sim_exec, 1500);
+			  }
+			}
+
+			async function startSimulation() {
+			  geoLayer.on('postrender', moveFeatures);
+			  await init_simulation(); // DB UPDATE and DB GET + Map Re-render
+			}
+
+      const tmp_pois = {
+        "type": "FeatureCollection",
+        "features": []
+      };
+
+      const tmp_fa = {
+        "type": "FeatureCollection",
+        "features": []
+      };
+
+			async function main_execution(){
+        await initPOI(); // inizializza POI
+        await initFA(); // inizializza FA
+			  await init(); // inizializza bikes[] e aggiunge le Features a vectorSource
+			}
+
+			main_execution();
+
+    </script>
+
+  </body>
+</html>

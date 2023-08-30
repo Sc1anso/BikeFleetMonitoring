@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Bike Fleet Monitoring</string>
+    <string name="edit_message">Enter a message</string>
+    <string name="button_send">Send</string>
+    <string name="dial_title">dial_title</string>
+    <string name="rack_name">rack_name</string>
+    <string name="rack_id">rack_id</string>
+    <string name="textview">TextView</string>
+    <string name="continue_rental">Continue rental</string>
+    <string name="end_rental">End rental</string>
+</resources>

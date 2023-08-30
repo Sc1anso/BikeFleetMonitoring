@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+    <style>
+      html {
+        height: 100%;
+      }
+      body {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding-top: 40px;
+        padding-bottom: 40px;
+      }
+      #loginForm {
+        width: 100%;
+        max-width: 330px;
+        padding: 15px;
+        margin: auto;
+      }
+      .form-floating {
+        margin-bottom: 6px;
+      }
+      #errorMsg_1 {
+        color:  red;
+      }
+    </style>
+
+    <title>Bike Fleet Monitoring - Login Area</title>
+  </head>
+  <body class="text-center">
+
+    <div class="container">
+      <h1>Register/Login to<br>bike fleet monitoring service</h1>
+      <form id="loginForm">
+        <p id="errorMsg_1" class="d-none">Wrong or missing username or password</p>
+        <div class="form-floating">
+          <input type="text" id="username" name="username" class="form-control" placeholder="E-mail / Username" required autofocus>
+          <label for="userEmail">E-mail or Username</label>
+        </div>
+        <div class="form-floating">
+          <input type="password" id="userPassword" name="userPassword" class="form-control" placeholder="Password" required>
+          <label for="userPassword">Password</label>
+        </div>
+        <button id="btnReg" class="btn btn-lg btn-primary btn-block" type="submit" onclick="signUp()">Register</button>
+        <button id="btnLogin" class="btn btn-lg btn-primary btn-block" type="submit" onclick="signIn()">Login</button>
+      </form>
+    </div>
+
+    <!-- IMPORT JQUERY-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+
+      function signUp(){
+        var user = document.getElementById("username").value;
+        var psw = document.getElementById("userPassword").value;
+        //console.log(psw);
+        if (user != "" && psw != "") {
+          $.get("php/login_modules/register.php", {user: user, psw: psw}).done(function(response){
+            //console.log(response);
+            if (response == "true") {
+              var errorMsg = document.getElementById("errorMsg_1");
+              errorMsg.style.color = "blue";
+              errorMsg.innerText = "New user correctly registered!";
+              errorMsg.classList.remove("d-none");
+              //alert("New user correctly registered!");
+            } else {
+              var errorMsg = document.getElementById("errorMsg_1");
+              errorMsg.style.color = "red";
+              errorMsg.innerText = "Username already registered!";
+              errorMsg.classList.remove("d-none");
+              //alert("Username '" + user + "' already used!");
+            }
+          });
+        } else {
+          var errorMsg = document.getElementById("errorMsg_1");
+          errorMsg.style.color = "red";
+          errorMsg.classList.remove("d-none");
+          //alert("Missing username or password");
+        }
+      };
+
+      function signIn(){
+        //var form = document.getElementById("loginForm");
+        var user = document.getElementById("username").value;
+        var psw = document.getElementById("userPassword").value;
+
+        if (user != "" && psw != "") {
+          $.get("php/login_modules/login.php", {user: user, psw: psw}).done(function(response){
+            //console.log(response);
+            if (response == "false") {
+              var errorMsg = document.getElementById("errorMsg_1");
+              errorMsg.style.color = "red";
+              errorMsg.innerText = "Username not registered!";
+              errorMsg.classList.remove("d-none");
+              //alert("Username '" + user + "' not registered");
+            } else if (response == "true") {
+              window.location.href = "client.html";
+            } else {
+              var errorMsg = document.getElementById("errorMsg_1");
+              errorMsg.style.color = "red";
+              errorMsg.innerText = "Wrong password!";
+              errorMsg.classList.remove("d-none");
+              //alert("Wrong password");
+            }
+          });
+        } else {
+          var errorMsg = document.getElementById("errorMsg_1");
+          errorMsg.style.color = "red";
+          errorMsg.classList.remove("d-none");
+          //alert("Missing username or password");
+        }
+      };
+      document.getElementById("btnLogin").addEventListener("click", (e) => {
+        e.preventDefault();
+
+        //check input
+        /*var form = document.getElementById("loginForm");
+        var user = document.getElementById("username").value;
+        var psw = document.getElementById("userPassword").value;
+
+        var errorMsg = document.getElementById("errorMsg_1");
+        var errorMsg_2 = document.getElementById("errorMsg_2");
+        errorMsg_1.classList.add("d-none");
+        errorMsg_2.classList.add("d-none");
+
+        if((user == "" || user == null) || (psw == "" || psw == null)){
+          errorMsg_1.classList.remove("d-none");
+          return;
+        }*/
+
+      })
+
+      document.getElementById("btnReg").addEventListener("click", (e) => {
+        e.preventDefault();
+
+        //check input
+        /*var form = document.getElementById("loginForm");
+        var user = document.getElementById("username").value;
+        var psw = document.getElementById("userPassword").value;
+
+        var errorMsg_1 = document.getElementById("errorMsg_1");
+        var errorMsg_2 = document.getElementById("errorMsg_2");
+        errorMsg_1.classList.add("d-none");
+        errorMsg_2.classList.add("d-none");
+
+        if((user == "" || user == null) || (psw == "" || psw == null)){
+          errorMsg_1.classList.remove("d-none");
+          return;
+        }*/
+
+      })
+
+    </script>
+
+  </body>
+</html>
